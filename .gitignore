@@ -7,3 +7,5 @@ pytutor-embed-demo/
 codechella-to-codcast/
 .idea/
 __pycache__/
+css/
+build/
