@@ -645,15 +645,14 @@ __webpack_require__(28);
 exports.SVG_ARROW_POLYGON = '0,3 12,3 12,0 18,5 12,10 12,7 0,7';
 var SVG_ARROW_HEIGHT = 10; // must match height of SVG_ARROW_POLYGON
 /* colors - see pytutor.css for more colors */
-exports.brightRed = '#00FFB1';
+exports.brightRed = '#e93f34';
 var connectorBaseColor = '#005583';
 var connectorHighlightColor = exports.brightRed;
 var connectorInactiveColor = '#cccccc';
 var errorColor = exports.brightRed;
 var breakpointColor = exports.brightRed;
-exports.darkGreen = '007D0A';
 // Unicode arrow types: '\u21d2', '\u21f0', '\u2907'
-exports.darkArrowColor = exports.darkGreen;
+exports.darkArrowColor = exports.brightRed;
 exports.lightArrowColor = '#c9e6ca';
 var heapPtrSrcRE = /__heap_pointer_src_/;
 var rightwardNudgeHack = true; // suggested by John DeNero, toggle with global
@@ -1142,7 +1141,7 @@ var ExecutionVisualizer = /** @class */ (function () {
             // STEC4500: disable stepforwardbutton after stepping
             myViz.domRoot.find("#vcrControls #jmpStepFwd").attr("disabled", true);
             var pla = myViz.domRootD3.select('#curLineArrow');
-            pla.attr('opacity', 0.1); // hide it again!
+            pla.attr('opacity', 0.1); // hide the arrow again!
             myViz.updateOutput(true);
             return true;
         }
@@ -1179,9 +1178,6 @@ var ExecutionVisualizer = /** @class */ (function () {
         }
         this.outputBox.renderOutput(this.curTrace[this.curInstr].stdout);
         this.try_hook("end_updateOutput", { myViz: this });
-        // STEC4500: modifying arrow opacity on each output update
-        var pla = this.domRootD3.select('#curLineArrow');
-        pla.attr('opacity', 0.1); // hide it again!
     };
     // does a LOT of stuff, called by updateOutput
     ExecutionVisualizer.prototype.updateOutputFull = function (smoothTransition) {
@@ -1215,7 +1211,8 @@ var ExecutionVisualizer = /** @class */ (function () {
             }
         }
         this.navControls.setVcrControls(msg, isFirstInstr, isLastInstr);
-        this.navControls.setSliderVal(this.curInstr);
+        // STEC4500: remove slider
+        // this.navControls.setSliderVal(this.curInstr);
         // render error (if applicable):
         if (myViz.curLineExceptionMsg) {
             if (myViz.curLineExceptionMsg === "Unknown error") {
@@ -3581,14 +3578,14 @@ var CodeDisplay = /** @class */ (function () {
             .attr('points', exports.SVG_ARROW_POLYGON)
             .attr('fill', exports.darkArrowColor)
             // STEC4500: initialize with 0 opacity, so it's hidden.
-            .attr('opacity', 0.1); // 
+            .attr('opacity', 0.1);
         // STEC4500: modify curLineArrow behavior
         var vcrControls = this.owner.domRoot.find("#vcrControls");
         var o = this.owner;
         var cla = this.domRootD3.select('#curLineArrow');
         cla.on('click', function () {
             cla.attr('opacity', 1); // show it again!
-            vcrControls.find("#jmpStepFwd").attr("disabled", false);
+            vcrControls.find("#jmpStepFwd").attr("disabled", false); // enable the forward button again
             o.updateOutput(true);
         });
         // 2012-09-05: Disable breakpoints for now to simplify UX
@@ -3817,10 +3814,11 @@ var NavigationController = /** @class */ (function () {
     NavigationController.prototype.showUserInputDiv = function () {
         this.domRoot.find('#rawUserInputDiv').show();
     };
-    NavigationController.prototype.setSliderVal = function (v) {
-        // PROGRAMMATICALLY change the value, so evt.originalEvent should be undefined
-        this.domRoot.find('#executionSlider').slider('value', v);
-    };
+    // STEC4500: remove slider
+    // setSliderVal(v: number) {
+    //   // PROGRAMMATICALLY change the value, so evt.originalEvent should be undefined
+    //   this.domRoot.find('#executionSlider').slider('value', v);
+    // }
     NavigationController.prototype.setVcrControls = function (msg, isFirstInstr, isLastInstr) {
         var vcrControls = this.domRoot.find("#vcrControls");
         vcrControls.find("#curInstr").html(msg);
@@ -3867,27 +3865,27 @@ var NavigationController = /** @class */ (function () {
         // I originally didn't want to delete and re-create this overlay every time,
         // but if I don't do so, there are weird flickering artifacts with clearing
         // the SVG container; so it's best to just delete and re-create the container each time
-        // var sliderOverlay = this.domRootD3.select('#executionSliderFooter')
-        //   .append('svg')
-        //   .attr('id', 'sliderOverlay')
-        //   .attr('width', w)
-        //   .attr('height', 12);
+        var sliderOverlay = this.domRootD3.select('#executionSliderFooter')
+            .append('svg')
+            .attr('id', 'sliderOverlay')
+            .attr('width', w)
+            .attr('height', 12);
         var xrange = d3.scale.linear()
             .domain([0, this.nSteps - 1])
             .range([0, w]);
-        // sliderOverlay.selectAll('rect')
-        //   .data(sortedBreakpointsList)
-        //   .enter().append('rect')
-        //   .attr('x', function(d, i) {
-        //     // make edge case of 0 look decent:
-        //     return (d === 0) ? 0 : xrange(d) - 1;
-        //   })
-        //   .attr('y', 0)
-        //   .attr('width', 2)
-        //   .attr('height', 12)
-        //   .style('fill', function(d) {
-        //      return breakpointColor;
-        //   });
+        sliderOverlay.selectAll('rect')
+            .data(sortedBreakpointsList)
+            .enter().append('rect')
+            .attr('x', function (d, i) {
+            // make edge case of 0 look decent:
+            return (d === 0) ? 0 : xrange(d) - 1;
+        })
+            .attr('y', 0)
+            .attr('width', 2)
+            .attr('height', 12)
+            .style('fill', function (d) {
+            return breakpointColor;
+        });
     };
     NavigationController.prototype.showError = function (msg) {
         if (msg) {
