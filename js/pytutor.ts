@@ -45,15 +45,16 @@ export var SVG_ARROW_POLYGON = '0,3 12,3 12,0 18,5 12,10 12,7 0,7';
 var SVG_ARROW_HEIGHT = 10; // must match height of SVG_ARROW_POLYGON
 
 /* colors - see pytutor.css for more colors */
-export var brightRed = '#e93f34';
+export var brightRed = '#00FFB1';
 var connectorBaseColor = '#005583';
 var connectorHighlightColor = brightRed;
 var connectorInactiveColor = '#cccccc';
 var errorColor = brightRed;
 var breakpointColor = brightRed;
+export var darkGreen = '007D0A';
 
 // Unicode arrow types: '\u21d2', '\u21f0', '\u2907'
-export var darkArrowColor = brightRed;
+export var darkArrowColor = darkGreen;
 export var lightArrowColor = '#c9e6ca';
 
 var heapPtrSrcRE = /__heap_pointer_src_/;
@@ -171,6 +172,39 @@ export class ExecutionVisualizer {
 
   breakpoints: d3.Map<{}> = d3.map(); // set of execution points to set as breakpoints
   sortedBreakpointsList: any[] = [];  // sorted and synced with breakpoints
+  
+  //STEC4500: adjust the line # for method invocation to the method header.
+  adjustMethodInvocationLineNumber(code, trace) {
+    var lines = code.split('\n');
+    console.log("lines:");
+    lines.forEach(element => {
+      console.log(element);     
+    });
+
+
+    console.log("Call elements:");
+    trace.forEach(element => {
+      if (element.event=="call") {
+        console.log(element.event);
+        console.log(element.func_name);
+        console.log(element.line);
+        console.log(lines[element.line-1]);
+        var i = element.line-1;
+        while (i>=0) {
+          if (lines[i].indexOf(element.func_name)>=0)
+             break;
+          i--;
+        }
+        if (i>=0)
+          element.line = i+1;
+        else
+          console.log("adjustMethodInvocationLineNumber: cannot find method header!");
+      }     
+    });
+
+    return trace;
+
+  }
 
   // Constructor with an ever-growing feature-crepped list of options :)
   // domRootID is the string ID of the root element where to render this instance
@@ -224,6 +258,24 @@ export class ExecutionVisualizer {
     this.curInputCode = dat.code.rtrim(); // kill trailing spaces
     this.params = params;
     this.curTrace = dat.trace;
+	
+	/*STEC4500*/
+    console.log("code:");
+    console.log(this.curInputCode);
+
+    console.log("orig trace: ");
+    console.log(this.curTrace);
+    this.curTrace.forEach(element => {
+      console.log(element);      
+    }); 
+
+    this.curTrace = this.adjustMethodInvocationLineNumber(this.curInputCode, this.curTrace);
+
+    console.log("new trace: ");
+    console.log(this.curTrace);
+    this.curTrace.forEach(element => {
+      console.log(element);      
+    });
 
     // postprocess the trace
     if (this.curTrace.length > 0) {
@@ -483,9 +535,10 @@ export class ExecutionVisualizer {
                                       this.domRootD3.select('#vizLayoutTdSecond'));
 
     myViz.navControls.showError(this.instrLimitReachedWarningMsg);
+
     // STEC4500: remove horizontal slider to prevent skipping ahead
-    // myViz.navControls.setupSlider(this.curTrace.length - 1);
-  
+     //myViz.navControls.setupSlider(this.curTrace.length - 1);
+
     if (this.params.startingInstruction) {
       this.params.jumpToEnd = false; // override! make sure to handle FIRST
 
@@ -648,7 +701,7 @@ export class ExecutionVisualizer {
       // STEC4500: disable stepforwardbutton after stepping
       myViz.domRoot.find("#vcrControls #jmpStepFwd").attr("disabled", true);
       var pla = myViz.domRootD3.select('#curLineArrow');
-      pla.attr('opacity', 0.1); // hide the arrow again!
+      pla.attr('opacity', 0.1); // hide it again!
 
       myViz.updateOutput(true);
       return true;
@@ -677,6 +730,8 @@ export class ExecutionVisualizer {
       return true;
     }
 
+
+
     return false;
   }
 
@@ -690,6 +745,10 @@ export class ExecutionVisualizer {
     }
     this.outputBox.renderOutput(this.curTrace[this.curInstr].stdout);
     this.try_hook("end_updateOutput", {myViz:this});
+
+    // STEC4500: modifying arrow opacity on each output update
+    /*var pla = this.domRootD3.select('#curLineArrow');
+    pla.attr('opacity', 0.1); // hide it again!*/
   }
 
   // does a LOT of stuff, called by updateOutput
@@ -730,8 +789,7 @@ export class ExecutionVisualizer {
     }
 
     this.navControls.setVcrControls(msg, isFirstInstr, isLastInstr);
-    // STEC4500: remove slider
-    // this.navControls.setSliderVal(this.curInstr);
+    //this.navControls.setSliderVal(this.curInstr);
 
     // render error (if applicable):
     if (myViz.curLineExceptionMsg) {
@@ -3452,7 +3510,7 @@ class CodeDisplay {
         .append('polygon')
         .attr('id', 'prevLineArrow')
         .attr('points', SVG_ARROW_POLYGON)
-        .attr('fill', lightArrowColor);
+        .attr('fill', lightArrowColor);    
 
     this.domRootD3.select('svg#leftCodeGutterSVG')
         .append('polygon')
@@ -3460,15 +3518,15 @@ class CodeDisplay {
         .attr('points', SVG_ARROW_POLYGON)
         .attr('fill', darkArrowColor)
         // STEC4500: initialize with 0 opacity, so it's hidden.
-        .attr('opacity', 0.1); 
-    
+        .attr('opacity', 0.1); // 
+
     // STEC4500: modify curLineArrow behavior
     var vcrControls = this.owner.domRoot.find("#vcrControls");
     var o = this.owner;
     var cla = this.domRootD3.select('#curLineArrow');
     cla.on('click', function() {
       cla.attr('opacity', 1); // show it again!
-      vcrControls.find("#jmpStepFwd").attr("disabled", false); // enable the forward button again
+      vcrControls.find("#jmpStepFwd").attr("disabled", false);
       o.updateOutput(true);
     });
 
@@ -3731,11 +3789,10 @@ class NavigationController {
     this.domRoot.find('#rawUserInputDiv').show();
   }
 
-  // STEC4500: remove slider
-  // setSliderVal(v: number) {
-  //   // PROGRAMMATICALLY change the value, so evt.originalEvent should be undefined
-  //   this.domRoot.find('#executionSlider').slider('value', v);
-  // }
+  /*setSliderVal(v: number) {
+    // PROGRAMMATICALLY change the value, so evt.originalEvent should be undefined
+    this.domRoot.find('#executionSlider').slider('value', v);
+  }*/
 
   setVcrControls(msg: string, isFirstInstr: boolean, isLastInstr: boolean) {
     var vcrControls = this.domRoot.find("#vcrControls");
@@ -3787,29 +3844,29 @@ class NavigationController {
     // I originally didn't want to delete and re-create this overlay every time,
     // but if I don't do so, there are weird flickering artifacts with clearing
     // the SVG container; so it's best to just delete and re-create the container each time
-    var sliderOverlay = this.domRootD3.select('#executionSliderFooter')
-      .append('svg')
-      .attr('id', 'sliderOverlay')
-      .attr('width', w)
-      .attr('height', 12);
+    // var sliderOverlay = this.domRootD3.select('#executionSliderFooter')
+    //   .append('svg')
+    //   .attr('id', 'sliderOverlay')
+    //   .attr('width', w)
+    //   .attr('height', 12);
 
     var xrange = d3.scale.linear()
       .domain([0, this.nSteps - 1])
       .range([0, w]);
 
-    sliderOverlay.selectAll('rect')
-      .data(sortedBreakpointsList)
-      .enter().append('rect')
-      .attr('x', function(d, i) {
-        // make edge case of 0 look decent:
-        return (d === 0) ? 0 : xrange(d) - 1;
-      })
-      .attr('y', 0)
-      .attr('width', 2)
-      .attr('height', 12)
-      .style('fill', function(d) {
-         return breakpointColor;
-      });
+    // sliderOverlay.selectAll('rect')
+    //   .data(sortedBreakpointsList)
+    //   .enter().append('rect')
+    //   .attr('x', function(d, i) {
+    //     // make edge case of 0 look decent:
+    //     return (d === 0) ? 0 : xrange(d) - 1;
+    //   })
+    //   .attr('y', 0)
+    //   .attr('width', 2)
+    //   .attr('height', 12)
+    //   .style('fill', function(d) {
+    //      return breakpointColor;
+    //   });
   }
 
   showError(msg: string) {
