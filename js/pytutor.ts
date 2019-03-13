@@ -3522,27 +3522,35 @@ class CodeDisplay {
 
     // STEC4500: modify curLineArrow behavior
     var vcrControls = this.owner.domRoot.find("#vcrControls");
+    // disable button controls in favor of choicebox
+    vcrControls.hide();
+    var outputFrames = this.owner.domRoot.find("#vizLayoutTdSecond"); // STEC4500: add box for questions TBA
 
-    var outputFrames = this.owner.domRoot.find("#vizLayoutTdSecond"); //STEC4500: add box for questions TBA
-    outputFrames.append('<td bgColor=yellow id="gutterTD2" valign="top" rowspan="' + this.owner.codeOutputLines.length + '"><div id="rightCodeGutterSVG">Hello</div></td>');
-    var rightframe = outputFrames.find('#rightCodeGutterSVG');
-    rightframe.css('display', 'none');
-    rightframe.css('position', 'absolute');
-    rightframe.css('margin-left', '80px');
-    rightframe.css('margin-left', '80px');
+    outputFrames.append('<td bgColor=yellow id="gutterTD2" valign="top" rowspan="' + this.owner.codeOutputLines.length + '"><div id="tutorQuizDiv">\
+      <textarea id="tutorQuestionText" readonly>Hello: </textarea></div></td>');
+
+    var rightframe = outputFrames.find('#tutorQuizDiv');
+      rightframe.css('display', 'none');
+      rightframe.css('position', 'absolute');
+      rightframe.css('margin-left', '80px');
+    var questionText = rightframe.find('#tutorQuestionText');
     
     var o = this.owner;
     var cla = this.domRootD3.select('#curLineArrow');
     cla.on('click', function() {
       cla.attr('opacity', 1); // show it again!
-      // vcrControls.find("#jmpStepFwd").attr("disabled", false);
       rightframe.css('display', 'block');
+
+      questionText.val(o.curTrace[o.curInstr] // returns an Object 'object', do stuff with the contents
+        .event);
+
       o.updateOutput(true);
     });
 
     rightframe.on('click', function() {
       rightframe.css('display', 'none');
-      vcrControls.find("#jmpStepFwd").attr("disabled", false);
+      // vcrControls.find("#jmpStepFwd").attr("disabled", false);
+      o.stepForward();
       o.updateOutput(true);
     });
 
