@@ -3518,14 +3518,30 @@ class CodeDisplay {
         .attr('points', SVG_ARROW_POLYGON)
         .attr('fill', darkArrowColor)
         // STEC4500: initialize with 0 opacity, so it's hidden.
-        .attr('opacity', 0.1); // 
+        .attr('opacity', 0.1);
 
     // STEC4500: modify curLineArrow behavior
     var vcrControls = this.owner.domRoot.find("#vcrControls");
+
+    var outputFrames = this.owner.domRoot.find("#vizLayoutTdSecond"); //STEC4500: add box for questions TBA
+    outputFrames.append('<td bgColor=yellow id="gutterTD2" valign="top" rowspan="' + this.owner.codeOutputLines.length + '"><div id="rightCodeGutterSVG">Hello</div></td>');
+    var rightframe = outputFrames.find('#rightCodeGutterSVG');
+    rightframe.css('display', 'none');
+    rightframe.css('position', 'absolute');
+    rightframe.css('margin-left', '80px');
+    rightframe.css('margin-left', '80px');
+    
     var o = this.owner;
     var cla = this.domRootD3.select('#curLineArrow');
     cla.on('click', function() {
       cla.attr('opacity', 1); // show it again!
+      // vcrControls.find("#jmpStepFwd").attr("disabled", false);
+      rightframe.css('display', 'block');
+      o.updateOutput(true);
+    });
+
+    rightframe.on('click', function() {
+      rightframe.css('display', 'none');
       vcrControls.find("#jmpStepFwd").attr("disabled", false);
       o.updateOutput(true);
     });

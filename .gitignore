@@ -9,12 +9,3 @@ codechella-to-codcast/
 __pycache__/
 css/
 build/
-build/visualize.bundle.js
-build/composingprograms.bundle.js
-build/csc108h.bundle.js
-build/iframe-embed.bundle.js
-build/index.bundle.js
-build/opt-live.bundle.js
-build/pytutor-embed.bundle.js
-build/recorder.bundle.js
-build/render-trace.bundle.js
