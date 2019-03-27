@@ -8,4 +8,5 @@ codechella-to-codcast/
 .idea/
 __pycache__/
 css/
+build/*.js
 build/
