@@ -3542,10 +3542,17 @@ class CodeDisplay {
       rightframe.css('display', 'block');
 	
 	var text= "";
-	var jay;
+	var curEntry = o.curTrace[o.curInstr];
+	$.each(curEntry.stack_to_render, function(i, frame) {
+        $.each(frame.ordered_varnames, function(xxx, varname) {
+          var val = frame.encoded_locals[varname];
+		  var jay;
 	for(jay=0;jay<o.curTrace[o.curInstr+1].stack_to_render[0].ordered_varnames.length;jay++){
-		text += o.curTrace[o.curInstr+1].stack_to_render[0].ordered_varnames[jay] +" ";
-	}
+		text += o.curTrace[o.curInstr+1].stack_to_render[0].ordered_varnames[jay] +" "+o.curTrace[o.curInstr+1].stack_to_render[0].encoded_locals[varname];
+			}
+		});
+	});
+	
       questionText.val(text);
 
       o.updateOutput(true);
