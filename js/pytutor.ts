@@ -3546,10 +3546,21 @@ class CodeDisplay {
     cla.on('click', function () {
       cla.attr('opacity', 1); // show it again!
       rightframe.css('display', 'block');
-
+      
       var questionText = rightframe.find('#tutorQuestionText');
+      var text = "";
       var curEntry = o.curTrace[o.curInstr];
-      questionText.val(curEntry.stack_to_render[0].ordered_varnames[0] + ':' + curEntry.stack_to_render[0].encoded_locals[1]);
+      $.each(curEntry.stack_to_render, function (i, frame) {
+        $.each(frame.ordered_varnames, function (xxx, varname) {
+          var val = frame.encoded_locals[varname];
+          var jay;
+          for (jay = 0; jay < o.curTrace[o.curInstr + 1].stack_to_render[0].ordered_varnames.length; jay++) {
+            text = o.curTrace[o.curInstr + 1].stack_to_render[0].ordered_varnames[jay] + " " + o.curTrace[o.curInstr + 1].stack_to_render[0].encoded_locals[varname];
+          }
+        });
+      });
+
+      questionText.val(text);
 
       o.updateOutput(true);
     });
