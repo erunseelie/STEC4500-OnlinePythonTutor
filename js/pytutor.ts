@@ -3546,20 +3546,18 @@ class CodeDisplay {
     cla.on('click', function () {
       cla.attr('opacity', 1); // show it again!
       rightframe.css('display', 'block');
-      
+
       var questionText = rightframe.find('#tutorQuestionText');
       var text = "";
-      var curEntry = o.curTrace[o.curInstr];
-      $.each(curEntry.stack_to_render, function (i, frame) {
-        $.each(frame.ordered_varnames, function (xxx, varname) {
-          var val = frame.encoded_locals[varname];
-          var jay;
-          for (jay = 0; jay < o.curTrace[o.curInstr + 1].stack_to_render[0].ordered_varnames.length; jay++) {
-            text = o.curTrace[o.curInstr + 1].stack_to_render[0].ordered_varnames[jay] + " " + o.curTrace[o.curInstr + 1].stack_to_render[0].encoded_locals[varname];
-          }
-        });
-      });
 
+      // get the NEXT object in the trace entry list.
+      var numOfStacks = o.curTrace[o.curInstr + 1].stack_to_render.length;
+      var curObject = o.curTrace[o.curInstr + 1].stack_to_render[numOfStacks-1];
+
+      // STEC4500 3/27: iterates through the stack and variable names to print out the variable names & values.
+      $.each(curObject.ordered_varnames, function (i, varname) {
+        text += curObject.ordered_varnames[i] + ": " + curObject.encoded_locals[varname];
+      });
       questionText.val(text);
 
       o.updateOutput(true);
