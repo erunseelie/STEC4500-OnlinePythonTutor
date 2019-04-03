@@ -3540,6 +3540,8 @@ class CodeDisplay {
     rightframe.css('display', 'none');
     rightframe.css('position', 'absolute');
     rightframe.css('margin-left', '80px');
+    var form = '';
+    outputFrames.append(form);
 
     var o = this.owner;
     var cla = this.domRootD3.select('#curLineArrow');
@@ -3552,12 +3554,27 @@ class CodeDisplay {
 
       // get the NEXT object in the trace entry list.
       var numOfStacks = o.curTrace[o.curInstr + 1].stack_to_render.length;
-      var curObject = o.curTrace[o.curInstr + 1].stack_to_render[numOfStacks-1];
+      var curObject = o.curTrace[o.curInstr + 1].stack_to_render[numOfStacks - 1]; // -1 to prevent out of bounds
 
       // STEC4500 3/27: iterates through the stack and variable names to print out the variable names & values.
       $.each(curObject.ordered_varnames, function (i, varname) {
         text += curObject.ordered_varnames[i] + ": " + curObject.encoded_locals[varname];
       });
+
+      // STEC4500 4/3: add choicebox for answering questions. TODO
+      var preNumOfVars = o.curTrace[o.curInstr].stack_to_render[numOfStacks - 1].length;
+      var curNumOfVars = curObject.ordered_varnames.length;
+      form = '<form id="cbVarChange">'
+      + '<p>Check the languages you are most proficient in.</p>'
+      + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
+      + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
+      + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
+      + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
+      + '</form>';
+      if (preNumOfVars != curNumOfVars) {
+        // new var? var gone? var changed? no change?
+      }
+
       questionText.val(text);
 
       o.updateOutput(true);
