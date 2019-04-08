@@ -271,7 +271,7 @@ export class ExecutionVisualizer {
     //   console.log(element);
     // });
 
-    this.curTrace = this.adjustMethodInvocationLineNumber(this.curInputCode, this.curTrace, false); //false: disable line # adjustment for method invocation
+    this.curTrace = this.adjustMethodInvocationLineNumber(this.curInputCode, this.curTrace, true); //false: disable line # adjustment for method invocation
 
     console.log("new trace: ");
     console.log(this.curTrace);
@@ -3618,14 +3618,15 @@ class CodeDisplay {
 
       questionText.val(text);
 
-      var newForm = '<p>What is happenning in this line?</p>'
+      var newForm = '<p>What is happening in this line?</p>'
         + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
         + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
         + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
         + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
         ;
 
-      var frameForm = rightframe.find('#cbVarChange');
+      var frameForm = document.getElementById('cbVarChange');
+      // var frameForm = rightframe.find('#cbVarChange');
       frameForm.innerHTML = newForm;
 
       o.updateOutput(true);
