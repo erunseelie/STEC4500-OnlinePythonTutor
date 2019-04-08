@@ -56,6 +56,7 @@ export var darkGreen = '007D0A';
 // Unicode arrow types: '\u21d2', '\u21f0', '\u2907'
 export var darkArrowColor = darkGreen;
 export var lightArrowColor = '#c9e6ca';
+var correctAnswer = 'none';
 
 var heapPtrSrcRE = /__heap_pointer_src_/;
 var rightwardNudgeHack = true; // suggested by John DeNero, toggle with global
@@ -271,7 +272,7 @@ export class ExecutionVisualizer {
     //   console.log(element);
     // });
 
-    this.curTrace = this.adjustMethodInvocationLineNumber(this.curInputCode, this.curTrace, false); //false: disable line # adjustment for method invocation
+    this.curTrace = this.adjustMethodInvocationLineNumber(this.curInputCode, this.curTrace, true); //false: disable line # adjustment for method invocation
 
     console.log("new trace: ");
     console.log(this.curTrace);
@@ -3538,29 +3539,44 @@ class CodeDisplay {
     var outputFrames = this.owner.domRoot.find("#vizLayoutTdSecond");
     outputFrames.append('<td bgColor=yellow id="gutterTD2" valign="top" rowspan="' +
       this.owner.codeOutputLines.length + '"><div id="tutorQuizDiv">' +
-      '<textarea id="tutorQuestionText" readonly>Hello: </textarea></div></td>');
+      '<textarea id="tutorQuestionText" readonly>Hello:Jay </textarea></div></td>');
+	
+	// Jiawei added another frames for pop up text.
+	var outputFrames = this.owner.domRoot.find("#vizLayoutTdSecond");
+    outputFrames.append('<td bgColor=yellow id="gutterTD2" valign="top" rowspan="' +
+      this.owner.codeOutputLines.length + '"><div id="popUpText">' +
+      '<textarea id="popUpContent" readonly>Perfect! You got it right! </textarea></div></td>');
+
+    var popUp = outputFrames.find('#popUpText');
+	popUp.css('display', 'none');
+	popUp.css('position', 'absolute');
+    popUp.css('margin-left', '80px');
 
     var rightframe = outputFrames.find('#tutorQuizDiv');
     rightframe.css('display', 'none');
     rightframe.css('position', 'absolute');
     rightframe.css('margin-left', '80px');
 
-    var form = '<td><form id="cbVarChange">'
+    var form = '<td><form action="#" method="post" id="cbVarChange">'
       + '<p>Old one1</p>'
       + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
       + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
       + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
-      + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
-      + '</form></td>';
+      + '<input type="radio" name="varChange" value="none"><label for="None of Above">None of Above</label><br>'
+      //+ '<p><button type="button" name="getVal">Get Value of Selected</button></p></form></td>'
+	  ;
     rightframe.append(form);
 
     var o = this.owner;
     var cla = this.domRootD3.select('#curLineArrow');
     cla.on('click', function () {
       cla.attr('opacity', 1); // show it again!
+	  popUp.css('display', 'none');
       rightframe.css('display', 'block');
+	  
 
       var questionText = rightframe.find('#tutorQuestionText');
+
       var text = "";
 
       // get the NEXT object in the trace entry list.
@@ -3599,6 +3615,7 @@ class CodeDisplay {
             var prevVarValue = prevObject.encoded_locals[varname];
             if (curVarValue != prevVarValue) {
               text += "==varable : " + curObject.ordered_varnames[i] + "'s new value: " + curVarValue;
+              correctAnswer = "change";
               //text +=  "prev" + i + "th var: " + prevObject.ordered_varnames[i] + ": " + prevObject.encoded_locals[varname];
             }
           });
@@ -3607,6 +3624,7 @@ class CodeDisplay {
           var newVarName = curObject.ordered_varnames[curObject.ordered_varnames.length - 1];
           var newVarValue = curObject.encoded_locals[newVarName];
           text += "==value for new variable " + newVarName + " : " + newVarValue;
+          correctAnswer = "new";
         }
       } else if (curNumOfStacks > prevNumOfStacks) { //curNumOfStacks  == prevNumOfStacks + 1
         var newStackName = curStack.funcName;
@@ -3618,22 +3636,61 @@ class CodeDisplay {
 
       questionText.val(text);
 
-      var newForm = '<p>What is happenning in this line?</p>'
+      var newForm = '<p>What is happening in this line?</p>'
         + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
         + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
         + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
-        + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
+        + '<input type="radio" name="varChange" value="none"><label for="None of Above">None of Above</label><br>'
+        //+ '<p><button type="button" name="getVal">Get Value of Selected</button></p>'
         ;
 
-      var frameForm = rightframe.find('#cbVarChange');
+      var frameForm = document.getElementById('cbVarChange');
+      // var frameForm = rightframe.find('#cbVarChange');
       frameForm.innerHTML = newForm;
 
       o.updateOutput(true);
     });
+	
+	popUp.on('click', function () {
+		rightframe.css('display', 'block');
+		o.updateOutput(true);
+	});
 
-    rightframe.on('click', function () {
-      rightframe.css('display', 'none');
-      o.stepForward();
+    //document.getElementById('cbVarChange').onsubmit = function () {
+       rightframe.on('click', function () {
+
+      // https://www.dyn-web.com/tutorials/forms/radio/get-selected.php
+      function getRadioVal(form, name) {
+        var val;
+        // get list of radio buttons with specified name
+        var radios = form.elements[name];
+
+        // loop through list of radio buttons
+        for (var i = 0, len = radios.length; i < len; i++) {
+          if (radios[i].checked) { // radio checked?
+            val = radios[i].value; // if so, hold its value in val
+            break; // and break out of for loop
+          }
+        }
+        return val; // return value of checked radio or undefined if none checked
+      }
+      var studentAnswer = getRadioVal(document.getElementById('cbVarChange'), 'varChange');
+	  
+	  var popUpContents = popUp.find('#popUpContent');
+	  var textOfPopUp = "";
+	  
+      if (correctAnswer == studentAnswer) {
+        //rightframe.css('display', 'none');
+		textOfPopUp = "Perfect! You got it right!";
+        o.stepForward();
+      }
+	  else{
+		  textOfPopUp = "Oh-ohh T^T  Try it again~";
+	  }
+		
+		rightframe.css('display', 'none');
+		popUpContents.val(textOfPopUp);
+		popUp.css('display', 'block');
       o.updateOutput(true);
     });
 
