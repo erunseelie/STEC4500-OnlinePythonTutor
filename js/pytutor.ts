@@ -174,7 +174,10 @@ export class ExecutionVisualizer {
   sortedBreakpointsList: any[] = [];  // sorted and synced with breakpoints
 
   // STEC4500: adjust the line # for method invocation to the method header.
-  adjustMethodInvocationLineNumber(code, trace) {
+  adjustMethodInvocationLineNumber(code, trace, whetherAdjust) {
+    if (whetherAdjust == false)
+      return trace;
+
     var lines = code.split('\n');
     console.log("lines:");
     lines.forEach(element => {
@@ -264,17 +267,17 @@ export class ExecutionVisualizer {
 
     console.log("orig trace: ");
     console.log(this.curTrace);
-    this.curTrace.forEach(element => {
-      console.log(element);
-    });
+    // this.curTrace.forEach(element => {
+    //   console.log(element);
+    // });
 
-    this.curTrace = this.adjustMethodInvocationLineNumber(this.curInputCode, this.curTrace);
+    this.curTrace = this.adjustMethodInvocationLineNumber(this.curInputCode, this.curTrace, false); //false: disable line # adjustment for method invocation
 
     console.log("new trace: ");
     console.log(this.curTrace);
-    this.curTrace.forEach(element => {
-      console.log(element);
-    });
+    // this.curTrace.forEach(element => {
+    //   console.log(element);
+    // });
 
     // postprocess the trace
     if (this.curTrace.length > 0) {
@@ -3533,15 +3536,23 @@ class CodeDisplay {
 
     // STEC4500: add box for questions TBA
     var outputFrames = this.owner.domRoot.find("#vizLayoutTdSecond");
-    outputFrames.append('<td bgColor=yellow id="gutterTD2" valign="top" rowspan="' + this.owner.codeOutputLines.length + '"><div id="tutorQuizDiv">\
-      <textarea id="tutorQuestionText" readonly>Hello: </textarea></div></td>');
+    outputFrames.append('<td bgColor=yellow id="gutterTD2" valign="top" rowspan="' +
+      this.owner.codeOutputLines.length + '"><div id="tutorQuizDiv">' +
+      '<textarea id="tutorQuestionText" readonly>Hello: </textarea></div></td>');
 
     var rightframe = outputFrames.find('#tutorQuizDiv');
     rightframe.css('display', 'none');
     rightframe.css('position', 'absolute');
     rightframe.css('margin-left', '80px');
-    var form = '';
-    outputFrames.append(form);
+
+    var form = '<td><form id="cbVarChange">'
+      + '<p>Old one1</p>'
+      + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
+      + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
+      + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
+      + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
+      + '</form></td>';
+    rightframe.append(form);
 
     var o = this.owner;
     var cla = this.domRootD3.select('#curLineArrow');
@@ -3553,29 +3564,69 @@ class CodeDisplay {
       var text = "";
 
       // get the NEXT object in the trace entry list.
-      var numOfStacks = o.curTrace[o.curInstr + 1].stack_to_render.length;
-      var curObject = o.curTrace[o.curInstr + 1].stack_to_render[numOfStacks - 1]; // -1 to prevent out of bounds
-
       // STEC4500 3/27: iterates through the stack and variable names to print out the variable names & values.
-      $.each(curObject.ordered_varnames, function (i, varname) {
-        text += curObject.ordered_varnames[i] + ": " + curObject.encoded_locals[varname];
-      });
+      var curEntry = o.curTrace[o.curInstr + 1];
+      var curStack = curEntry.stack_to_render;
+      var curNumOfStacks = curStack.length;
+      //text += "Num Stacks: " + curNumOfStacks;
+      /*$.each(curEntry.stack_to_render, function(j, frame) {
+        var curObject = curEntry.stack_to_render[j];
+        $.each(curObject.ordered_varnames, function (i, varname) {
+          text += "" + j + "th frame: " + i + "th var: " + curObject.ordered_varnames[i] + ": " + curObject.encoded_locals[varname];
+        });
+      });*/
 
-      // STEC4500 4/3: add choicebox for answering questions. TODO
-      var preNumOfVars = o.curTrace[o.curInstr].stack_to_render[numOfStacks - 1].length;
-      var curNumOfVars = curObject.ordered_varnames.length;
-      form = '<form id="cbVarChange">'
-      + '<p>Check the languages you are most proficient in.</p>'
-      + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
-      + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
-      + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
-      + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
-      + '</form>';
-      if (preNumOfVars != curNumOfVars) {
-        // new var? var gone? var changed? no change?
+      //STEC4500 4/3: STEC4500 3/27
+      var prevEntry = o.curTrace[o.curInstr];
+      var prevStack = curEntry.stack_to_render;
+      var prevNumOfStacks = prevStack.length;
+
+      text += "==[o.curInstr = " + o.curInstr + "]";
+      text += "==[cur event = " + curEntry.event + "]";
+      text += "==[cur line = " + curEntry.line + "]";
+      text += "==[prev event = " + prevEntry.event + "]";
+      text += "==[prev line = " + prevEntry.line + "]";
+
+      if (curNumOfStacks == prevNumOfStacks) {
+
+        var curObject = curEntry.stack_to_render[curNumOfStacks - 1];
+        var prevObject = prevEntry.stack_to_render[prevNumOfStacks - 1];
+        text += "==[Curs Num Vars: " + curObject.ordered_varnames.length + "]";
+        text += "==[Prev Num Vars: " + prevObject.ordered_varnames.length + "]";
+        if (curObject.ordered_varnames.length == prevObject.ordered_varnames.length) {
+          $.each(curObject.ordered_varnames, function (i, varname) {
+            var curVarValue = curObject.encoded_locals[varname];
+            var prevVarValue = prevObject.encoded_locals[varname];
+            if (curVarValue != prevVarValue) {
+              text += "==varable : " + curObject.ordered_varnames[i] + "'s new value: " + curVarValue;
+              //text +=  "prev" + i + "th var: " + prevObject.ordered_varnames[i] + ": " + prevObject.encoded_locals[varname];
+            }
+          });
+        }
+        else { //curObject.ordered_varnames.length == prevObject.ordered_varnames.length+1)
+          var newVarName = curObject.ordered_varnames[curObject.ordered_varnames.length - 1];
+          var newVarValue = curObject.encoded_locals[newVarName];
+          text += "==value for new variable " + newVarName + " : " + newVarValue;
+        }
+      } else if (curNumOfStacks > prevNumOfStacks) { //curNumOfStacks  == prevNumOfStacks + 1
+        var newStackName = curStack.funcName;
+        text += "==new stack name: " + newStackName;
+
+      } else { //curNumOfStacks  == prevNumOfStacks-1
+        text += "==return";
       }
 
       questionText.val(text);
+
+      var newForm = '<p>What is happenning in this line?</p>'
+        + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
+        + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
+        + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
+        + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
+        ;
+
+      var frameForm = rightframe.find('#cbVarChange');
+      frameForm.innerHTML = newForm;
 
       o.updateOutput(true);
     });
