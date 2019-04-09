@@ -3651,10 +3651,6 @@ class CodeDisplay {
       o.updateOutput(true);
     });
 	
-	popUp.on('click', function () {
-		rightframe.css('display', 'block');
-		o.updateOutput(true);
-	});
 
     //document.getElementById('cbVarChange').onsubmit = function () {
        rightframe.on('click', function () {
@@ -3680,17 +3676,21 @@ class CodeDisplay {
 	  var textOfPopUp = "";
 	  
       if (correctAnswer == studentAnswer) {
-        //rightframe.css('display', 'none');
-		textOfPopUp = "Perfect! You got it right!";
+          textOfPopUp = "Perfect! You got it right!";
+          popUp.off("click");
         o.stepForward();
       }
 	  else{
-		  textOfPopUp = "Oh-ohh T^T  Try it again~";
+          textOfPopUp = "Oh-ohh T^T  Try it again~";
+          popUp.on('click', function () {
+              rightframe.css('display', 'block');
+              o.updateOutput(true);
+          });
 	  }
 		
 		rightframe.css('display', 'none');
 		popUpContents.val(textOfPopUp);
-		popUp.css('display', 'block');
+		popUp.css('display', 'block'); //hide the textarea and the form and show the popUp text.
       o.updateOutput(true);
     });
 
