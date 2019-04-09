@@ -1,12 +1,16 @@
+# npm dependencies
 node_modules/
+
+# typescript
 typings/
+
+# generated files
+__pycache__/
+build/*.js
 *.js.map
 npm-debug.log
+
+# ignored files
 example-code/
 pytutor-embed-demo/
 codechella-to-codcast/
-.idea/
-__pycache__/
-css/
-build/*.js
-build/

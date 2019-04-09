@@ -56,6 +56,7 @@ export var darkGreen = '007D0A';
 // Unicode arrow types: '\u21d2', '\u21f0', '\u2907'
 export var darkArrowColor = darkGreen;
 export var lightArrowColor = '#c9e6ca';
+var correctAnswer = 'none';
 
 var heapPtrSrcRE = /__heap_pointer_src_/;
 var rightwardNudgeHack = true; // suggested by John DeNero, toggle with global
@@ -3545,13 +3546,13 @@ class CodeDisplay {
     rightframe.css('position', 'absolute');
     rightframe.css('margin-left', '80px');
 
-    var form = '<td><form id="cbVarChange">'
+    var form = '<td><form action="#" method="post" id="cbVarChange">'
       + '<p>Old one1</p>'
       + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
       + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
       + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
       + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
-      + '</form></td>';
+      + '<p><button type="button" name="getVal">Get Value of Selected</button></p></form></td>';
     rightframe.append(form);
 
     var o = this.owner;
@@ -3599,6 +3600,7 @@ class CodeDisplay {
             var prevVarValue = prevObject.encoded_locals[varname];
             if (curVarValue != prevVarValue) {
               text += "==varable : " + curObject.ordered_varnames[i] + "'s new value: " + curVarValue;
+              correctAnswer = "change";
               //text +=  "prev" + i + "th var: " + prevObject.ordered_varnames[i] + ": " + prevObject.encoded_locals[varname];
             }
           });
@@ -3607,6 +3609,7 @@ class CodeDisplay {
           var newVarName = curObject.ordered_varnames[curObject.ordered_varnames.length - 1];
           var newVarValue = curObject.encoded_locals[newVarName];
           text += "==value for new variable " + newVarName + " : " + newVarValue;
+          correctAnswer = "new";
         }
       } else if (curNumOfStacks > prevNumOfStacks) { //curNumOfStacks  == prevNumOfStacks + 1
         var newStackName = curStack.funcName;
@@ -3623,6 +3626,7 @@ class CodeDisplay {
         + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
         + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
         + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
+        + '<p><button type="button" name="getVal">Get Value of Selected</button></p>'
         ;
 
       var frameForm = document.getElementById('cbVarChange');
@@ -3632,11 +3636,33 @@ class CodeDisplay {
       o.updateOutput(true);
     });
 
-    rightframe.on('click', function () {
-      rightframe.css('display', 'none');
-      o.stepForward();
+    // STEC4500: radiobutton form.
+    // https://www.dyn-web.com/tutorials/forms/radio/get-selected.php
+    function getRadioVal(form, name) {
+      var val;
+      var radios = form.elements[name];
+
+      // loop through list of radio buttons, get the checked one, and break out.
+      for (var i = 0, len = radios.length; i < len; i++) {
+        if (radios[i].checked) {
+          val = radios[i].value;
+          break;
+        }
+      }
+      return val; // return value of checked radio or undefined if none checked
+    }
+
+    // STEC4500 4/9: attempt to create a radiobutton submission element.
+    document.getElementById('cbVarChange').onsubmit = function () {
+      var studentAnswer = getRadioVal(document.getElementById('cbVarChange'), 'varChange');
+      // only step forward if the answer is correct.
+      if (correctAnswer == studentAnswer) {
+        rightframe.css('display', 'none');
+        o.stepForward();
+      }
+      // no matter what happens, update the output.
       o.updateOutput(true);
-    });
+    };
 
     // 2012-09-05: Disable breakpoints for now to simplify UX
     // 2016-05-01: Revive breakpoint functionality
