@@ -613,15 +613,17 @@ __webpack_require__(28);
 exports.SVG_ARROW_POLYGON = '0,3 12,3 12,0 18,5 12,10 12,7 0,7';
 var SVG_ARROW_HEIGHT = 10; // must match height of SVG_ARROW_POLYGON
 /* colors - see pytutor.css for more colors */
-exports.brightRed = '#e93f34';
+exports.brightRed = '#00FFB1';
 var connectorBaseColor = '#005583';
 var connectorHighlightColor = exports.brightRed;
 var connectorInactiveColor = '#cccccc';
 var errorColor = exports.brightRed;
 var breakpointColor = exports.brightRed;
+exports.darkGreen = '007D0A';
 // Unicode arrow types: '\u21d2', '\u21f0', '\u2907'
-exports.darkArrowColor = exports.brightRed;
+exports.darkArrowColor = exports.darkGreen;
 exports.lightArrowColor = '#c9e6ca';
+var correctAnswer = 'none';
 var heapPtrSrcRE = /__heap_pointer_src_/;
 var rightwardNudgeHack = true; // suggested by John DeNero, toggle with global
 // returns a list of length a.length * b.length with elements from both
@@ -718,6 +720,20 @@ var ExecutionVisualizer = /** @class */ (function () {
         this.curInputCode = dat.code.rtrim(); // kill trailing spaces
         this.params = params;
         this.curTrace = dat.trace;
+        // STEC4500: log code & trace to console
+        console.log("code:");
+        console.log(this.curInputCode);
+        console.log("orig trace: ");
+        console.log(this.curTrace);
+        // this.curTrace.forEach(element => {
+        //   console.log(element);
+        // });
+        this.curTrace = this.adjustMethodInvocationLineNumber(this.curInputCode, this.curTrace, true); //false: disable line # adjustment for method invocation
+        console.log("new trace: ");
+        console.log(this.curTrace);
+        // this.curTrace.forEach(element => {
+        //   console.log(element);
+        // });
         // postprocess the trace
         if (this.curTrace.length > 0) {
             var lastEntry = this.curTrace[this.curTrace.length - 1];
@@ -823,6 +839,36 @@ var ExecutionVisualizer = /** @class */ (function () {
     // should this object be nested within another one?
     ExecutionVisualizer.prototype.shouldNestObject = function (obj) {
         return (!this.params.disableHeapNesting || this.objInAlwaysNestTypes(obj));
+    };
+    // STEC4500: adjust the line # for method invocation to the method header.
+    ExecutionVisualizer.prototype.adjustMethodInvocationLineNumber = function (code, trace, whetherAdjust) {
+        if (whetherAdjust == false)
+            return trace;
+        var lines = code.split('\n');
+        console.log("lines:");
+        lines.forEach(function (element) {
+            console.log(element);
+        });
+        console.log("Call elements:");
+        trace.forEach(function (element) {
+            if (element.event == "call") {
+                console.log(element.event);
+                console.log(element.func_name);
+                console.log(element.line);
+                console.log(lines[element.line - 1]);
+                var i = element.line - 1;
+                while (i >= 0) {
+                    if (lines[i].indexOf(element.func_name) >= 0)
+                        break;
+                    i--;
+                }
+                if (i >= 0)
+                    element.line = i + 1;
+                else
+                    console.log("adjustMethodInvocationLineNumber: cannot find method header!");
+            }
+        });
+        return trace;
     };
     /* API for adding a hook, created by David Pritchard
        https://github.com/daveagp
@@ -1108,8 +1154,8 @@ var ExecutionVisualizer = /** @class */ (function () {
             }
             // STEC4500: disable stepforwardbutton after stepping
             myViz.domRoot.find("#vcrControls #jmpStepFwd").attr("disabled", true);
-            var pla = myViz.domRootD3.select('#curLineArrow');
-            pla.attr('opacity', 0.1); // hide the arrow again!
+            var cla = myViz.domRootD3.select('#curLineArrow');
+            cla.attr('opacity', 0.1); // hide the line arrow again!
             myViz.updateOutput(true);
             return true;
         }
@@ -1179,8 +1225,7 @@ var ExecutionVisualizer = /** @class */ (function () {
             }
         }
         this.navControls.setVcrControls(msg, isFirstInstr, isLastInstr);
-        // STEC4500: remove slider
-        // this.navControls.setSliderVal(this.curInstr);
+        //this.navControls.setSliderVal(this.curInstr);
         // render error (if applicable):
         if (myViz.curLineExceptionMsg) {
             if (myViz.curLineExceptionMsg === "Unknown error") {
@@ -2312,8 +2357,10 @@ var DataVisualizer = /** @class */ (function () {
                         var labelID = varDivID + '_text_label';
                         $(this).append('<div class="objectIdLabel" id="' + labelID + '">id' + getRefID(val) + '</div>');
                         $(this).find('div#' + labelID).hover(function () {
-                            myViz.jsPlumbInstance.connect({ source: labelID, target: heapObjID,
-                                scope: 'varValuePointer' });
+                            myViz.jsPlumbInstance.connect({
+                                source: labelID, target: heapObjID,
+                                scope: 'varValuePointer'
+                            });
                         }, function () {
                             myViz.jsPlumbInstance.select({ source: labelID }).detach();
                         });
@@ -2505,8 +2552,10 @@ var DataVisualizer = /** @class */ (function () {
                         var labelID = varDivID + '_text_label';
                         $(this).append('<div class="objectIdLabel" id="' + labelID + '">id' + getRefID(val) + '</div>');
                         $(this).find('div#' + labelID).hover(function () {
-                            myViz.jsPlumbInstance.connect({ source: labelID, target: heapObjID,
-                                scope: 'varValuePointer' });
+                            myViz.jsPlumbInstance.connect({
+                                source: labelID, target: heapObjID,
+                                scope: 'varValuePointer'
+                            });
                         }, function () {
                             myViz.jsPlumbInstance.select({ source: labelID }).detach();
                         });
@@ -2676,7 +2725,8 @@ var DataVisualizer = /** @class */ (function () {
                 return;
             }
             //console.log('renderParentPointerConnector:', srcID, dstID);
-            myViz.jsPlumbInstance.connect({ source: srcID, target: dstID,
+            myViz.jsPlumbInstance.connect({
+                source: srcID, target: dstID,
                 anchors: ["LeftMiddle", "LeftMiddle"],
                 // 'horizontally offset' the parent pointers up so that they don't look as ugly ...
                 //connector: ["Flowchart", { stub: 9 + (6 * (totalParentPointersRendered + 1)) }],
@@ -2684,7 +2734,8 @@ var DataVisualizer = /** @class */ (function () {
                 connector: ["Bezier", { curviness: 45 }],
                 endpoint: ["Dot", { radius: 4 }],
                 //hoverPaintStyle: {lineWidth: 1, strokeStyle: connectorInactiveColor}, // no hover colors
-                scope: 'frameParentPointer' });
+                scope: 'frameParentPointer'
+            });
             totalParentPointersRendered++;
         }
         if (!myViz.params.textualMemoryLabels) {
@@ -2917,8 +2968,10 @@ var DataVisualizer = /** @class */ (function () {
                 var labelID = srcDivID + '_text_label';
                 d3DomElement.append('<div class="objectIdLabel" id="' + labelID + '">id' + objID + '</div>');
                 myViz.domRoot.find('div#' + labelID).hover(function () {
-                    myViz.jsPlumbInstance.connect({ source: labelID, target: dstDivID,
-                        scope: 'varValuePointer' });
+                    myViz.jsPlumbInstance.connect({
+                        source: labelID, target: dstDivID,
+                        scope: 'varValuePointer'
+                    });
                 }, function () {
                     myViz.jsPlumbInstance.select({ source: labelID }).detach();
                 });
@@ -2951,11 +3004,13 @@ var DataVisualizer = /** @class */ (function () {
         if (myViz.params.textualMemoryLabels) {
             typeLabelPrefix = 'id' + objID + ':';
         }
-        var hook_result = myViz.owner.try_hook("renderCompoundObject", { objID: objID, d3DomElement: d3DomElement,
+        var hook_result = myViz.owner.try_hook("renderCompoundObject", {
+            objID: objID, d3DomElement: d3DomElement,
             isTopLevel: isTopLevel, obj: obj,
             typeLabelPrefix: typeLabelPrefix,
             stepNum: stepNum,
-            myViz: myViz });
+            myViz: myViz
+        });
         if (hook_result[0])
             return;
         if (obj[0] == 'LIST' || obj[0] == 'TUPLE' || obj[0] == 'SET' || obj[0] == 'DICT') {
@@ -3547,15 +3602,121 @@ var CodeDisplay = /** @class */ (function () {
             .attr('fill', exports.darkArrowColor)
             // STEC4500: initialize with 0 opacity, so it's hidden.
             .attr('opacity', 0.1);
-        // STEC4500: modify curLineArrow behavior
+        // STEC4500: disable button controls in favor of choicebox
         var vcrControls = this.owner.domRoot.find("#vcrControls");
+        vcrControls.hide();
+        // STEC4500: add box for questions TBA
+        var outputFrames = this.owner.domRoot.find("#vizLayoutTdSecond");
+        outputFrames.append('<td bgColor=yellow id="gutterTD2" valign="top" rowspan="' +
+            this.owner.codeOutputLines.length + '"><div id="tutorQuizDiv">' +
+            '<textarea id="tutorQuestionText" readonly>Hello: </textarea></div></td>');
+        var rightframe = outputFrames.find('#tutorQuizDiv');
+        rightframe.css('display', 'none');
+        rightframe.css('position', 'absolute');
+        rightframe.css('margin-left', '80px');
+        var form = '<td><form action="#" method="post" id="cbVarChange">'
+            + '<p>Old one1</p>'
+            + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
+            + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
+            + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
+            + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
+            + '<p><button type="button" name="getVal">Get Value of Selected</button></p></form></td>';
+        rightframe.append(form);
         var o = this.owner;
         var cla = this.domRootD3.select('#curLineArrow');
         cla.on('click', function () {
             cla.attr('opacity', 1); // show it again!
-            vcrControls.find("#jmpStepFwd").attr("disabled", false); // enable the forward button again
+            rightframe.css('display', 'block');
+            var questionText = rightframe.find('#tutorQuestionText');
+            var text = "";
+            // get the NEXT object in the trace entry list.
+            // STEC4500 3/27: iterates through the stack and variable names to print out the variable names & values.
+            var curEntry = o.curTrace[o.curInstr + 1];
+            var curStack = curEntry.stack_to_render;
+            var curNumOfStacks = curStack.length;
+            //text += "Num Stacks: " + curNumOfStacks;
+            /*$.each(curEntry.stack_to_render, function(j, frame) {
+              var curObject = curEntry.stack_to_render[j];
+              $.each(curObject.ordered_varnames, function (i, varname) {
+                text += "" + j + "th frame: " + i + "th var: " + curObject.ordered_varnames[i] + ": " + curObject.encoded_locals[varname];
+              });
+            });*/
+            //STEC4500 4/3: STEC4500 3/27
+            var prevEntry = o.curTrace[o.curInstr];
+            var prevStack = curEntry.stack_to_render;
+            var prevNumOfStacks = prevStack.length;
+            text += "==[o.curInstr = " + o.curInstr + "]";
+            text += "==[cur event = " + curEntry.event + "]";
+            text += "==[cur line = " + curEntry.line + "]";
+            text += "==[prev event = " + prevEntry.event + "]";
+            text += "==[prev line = " + prevEntry.line + "]";
+            if (curNumOfStacks == prevNumOfStacks) {
+                var curObject = curEntry.stack_to_render[curNumOfStacks - 1];
+                var prevObject = prevEntry.stack_to_render[prevNumOfStacks - 1];
+                text += "==[Curs Num Vars: " + curObject.ordered_varnames.length + "]";
+                text += "==[Prev Num Vars: " + prevObject.ordered_varnames.length + "]";
+                if (curObject.ordered_varnames.length == prevObject.ordered_varnames.length) {
+                    $.each(curObject.ordered_varnames, function (i, varname) {
+                        var curVarValue = curObject.encoded_locals[varname];
+                        var prevVarValue = prevObject.encoded_locals[varname];
+                        if (curVarValue != prevVarValue) {
+                            text += "==varable : " + curObject.ordered_varnames[i] + "'s new value: " + curVarValue;
+                            correctAnswer = "change";
+                            //text +=  "prev" + i + "th var: " + prevObject.ordered_varnames[i] + ": " + prevObject.encoded_locals[varname];
+                        }
+                    });
+                }
+                else { //curObject.ordered_varnames.length == prevObject.ordered_varnames.length+1)
+                    var newVarName = curObject.ordered_varnames[curObject.ordered_varnames.length - 1];
+                    var newVarValue = curObject.encoded_locals[newVarName];
+                    text += "==value for new variable " + newVarName + " : " + newVarValue;
+                    correctAnswer = "new";
+                }
+            }
+            else if (curNumOfStacks > prevNumOfStacks) { //curNumOfStacks  == prevNumOfStacks + 1
+                var newStackName = curStack.funcName;
+                text += "==new stack name: " + newStackName;
+            }
+            else { //curNumOfStacks  == prevNumOfStacks-1
+                text += "==return";
+            }
+            questionText.val(text);
+            var newForm = '<p>What is happening in this line?</p>'
+                + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
+                + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
+                + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
+                + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
+                + '<p><button type="button" name="getVal">Get Value of Selected</button></p>';
+            var frameForm = document.getElementById('cbVarChange');
+            // var frameForm = rightframe.find('#cbVarChange');
+            frameForm.innerHTML = newForm;
             o.updateOutput(true);
         });
+        // STEC4500: radiobutton form.
+        // https://www.dyn-web.com/tutorials/forms/radio/get-selected.php
+        function getRadioVal(form, name) {
+            var val;
+            var radios = form.elements[name];
+            // loop through list of radio buttons, get the checked one, and break out.
+            for (var i = 0, len = radios.length; i < len; i++) {
+                if (radios[i].checked) {
+                    val = radios[i].value;
+                    break;
+                }
+            }
+            return val; // return value of checked radio or undefined if none checked
+        }
+        // STEC4500 4/9: attempt to create a radiobutton submission element.
+        document.getElementById('cbVarChange').onsubmit = function () {
+            var studentAnswer = getRadioVal(document.getElementById('cbVarChange'), 'varChange');
+            // only step forward if the answer is correct.
+            if (correctAnswer == studentAnswer) {
+                rightframe.css('display', 'none');
+                o.stepForward();
+            }
+            // no matter what happens, update the output.
+            o.updateOutput(true);
+        };
         // 2012-09-05: Disable breakpoints for now to simplify UX
         // 2016-05-01: Revive breakpoint functionality
         codeOutputD3
@@ -3782,19 +3943,17 @@ var NavigationController = /** @class */ (function () {
     NavigationController.prototype.showUserInputDiv = function () {
         this.domRoot.find('#rawUserInputDiv').show();
     };
-    // STEC4500: remove slider
-    // setSliderVal(v: number) {
-    //   // PROGRAMMATICALLY change the value, so evt.originalEvent should be undefined
-    //   this.domRoot.find('#executionSlider').slider('value', v);
-    // }
+    /*setSliderVal(v: number) {
+      // PROGRAMMATICALLY change the value, so evt.originalEvent should be undefined
+      this.domRoot.find('#executionSlider').slider('value', v);
+    }*/
     NavigationController.prototype.setVcrControls = function (msg, isFirstInstr, isLastInstr) {
         var vcrControls = this.domRoot.find("#vcrControls");
         vcrControls.find("#curInstr").html(msg);
         vcrControls.find("#jmpFirstInstr").attr("disabled", false);
         vcrControls.find("#jmpStepBack").attr("disabled", false);
-        // STEC4500: disable forward controls initially.
-        // vcrControls.find("#jmpStepFwd").attr("disabled", false);
-        // vcrControls.find("#jmpLastInstr").attr("disabled", false);
+        vcrControls.find("#jmpStepFwd").attr("disabled", false);
+        vcrControls.find("#jmpLastInstr").attr("disabled", false);
         if (isFirstInstr) {
             vcrControls.find("#jmpFirstInstr").attr("disabled", true);
             vcrControls.find("#jmpStepBack").attr("disabled", true);
@@ -3833,27 +3992,27 @@ var NavigationController = /** @class */ (function () {
         // I originally didn't want to delete and re-create this overlay every time,
         // but if I don't do so, there are weird flickering artifacts with clearing
         // the SVG container; so it's best to just delete and re-create the container each time
-        var sliderOverlay = this.domRootD3.select('#executionSliderFooter')
-            .append('svg')
-            .attr('id', 'sliderOverlay')
-            .attr('width', w)
-            .attr('height', 12);
+        // var sliderOverlay = this.domRootD3.select('#executionSliderFooter')
+        //   .append('svg')
+        //   .attr('id', 'sliderOverlay')
+        //   .attr('width', w)
+        //   .attr('height', 12);
         var xrange = d3.scale.linear()
             .domain([0, this.nSteps - 1])
             .range([0, w]);
-        sliderOverlay.selectAll('rect')
-            .data(sortedBreakpointsList)
-            .enter().append('rect')
-            .attr('x', function (d, i) {
-            // make edge case of 0 look decent:
-            return (d === 0) ? 0 : xrange(d) - 1;
-        })
-            .attr('y', 0)
-            .attr('width', 2)
-            .attr('height', 12)
-            .style('fill', function (d) {
-            return breakpointColor;
-        });
+        // sliderOverlay.selectAll('rect')
+        //   .data(sortedBreakpointsList)
+        //   .enter().append('rect')
+        //   .attr('x', function(d, i) {
+        //     // make edge case of 0 look decent:
+        //     return (d === 0) ? 0 : xrange(d) - 1;
+        //   })
+        //   .attr('y', 0)
+        //   .attr('width', 2)
+        //   .attr('height', 12)
+        //   .style('fill', function(d) {
+        //      return breakpointColor;
+        //   });
     };
     NavigationController.prototype.showError = function (msg) {
         if (msg) {
