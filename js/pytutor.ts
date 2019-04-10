@@ -3667,11 +3667,11 @@ class CodeDisplay {
 
       questionText.val(text);
 
-      var newForm = '<p>What is happening in this line?</p>'
-        + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
-        + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
-        + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
-        + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br></p>';
+      var newForm = '<p>What is happening in this line?</p>\
+        <input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>\
+        <input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>\
+        <input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>\
+        <input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br></p>';
 
       var frameForm = document.getElementById('cbVarChange');
       frameForm.innerHTML = newForm;
