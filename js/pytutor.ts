@@ -56,7 +56,6 @@ export var darkGreen = '007D0A';
 // Unicode arrow types: '\u21d2', '\u21f0', '\u2907'
 export var darkArrowColor = darkGreen;
 export var lightArrowColor = '#c9e6ca';
-var correctAnswer = 'none';
 
 var heapPtrSrcRE = /__heap_pointer_src_/;
 var rightwardNudgeHack = true; // suggested by John DeNero, toggle with global
@@ -702,15 +701,17 @@ export class ExecutionVisualizer {
         myViz.curInstr += 1;
       }
 
-      // STEC4500: disable stepforwardbutton after stepping
+      // STEC4500: disable stepforward button after stepping
       myViz.domRoot.find("#vcrControls #jmpStepFwd").attr("disabled", true);
       var cla = myViz.domRootD3.select('#curLineArrow');
       cla.attr('opacity', 0.1); // hide the line arrow again!
 
       myViz.updateOutput(true);
+      console.log("**************  CurInst === " + myViz.curInstr);
       return true;
     }
 
+    console.log("**************  CurInst === " + myViz.curInstr);
     return false;
   }
 
@@ -3576,6 +3577,7 @@ class CodeDisplay {
 
     var o = this.owner;
     var cla = this.domRootD3.select('#curLineArrow');
+    var correctAnswer;
     cla.on('click', function () {
       correctAnswer = 'none';
       cla.attr('opacity', 1); // show it again!
@@ -3583,7 +3585,6 @@ class CodeDisplay {
       rightframe.css('display', 'block');
 
       var questionText = rightframe.find('#tutorQuestionText');
-      // questionText.on('çlick', submitButton());
       var text = "";
 
       // get the NEXT object in the trace entry list.
@@ -3601,22 +3602,44 @@ class CodeDisplay {
 
       //STEC4500 4/3: STEC4500 3/27
       var prevEntry = o.curTrace[o.curInstr];
-      var prevStack = curEntry.stack_to_render;
+      var prevStack = prevEntry.stack_to_render;
       var prevNumOfStacks = prevStack.length;
 
       text += "==[o.curInstr = " + o.curInstr + "]";
       text += "==[cur event = " + curEntry.event + "]";
       text += "==[cur line = " + curEntry.line + "]";
+      text += "==[curNumOfStacks = " + curNumOfStacks + "]";
       text += "==[prev event = " + prevEntry.event + "]";
       text += "==[prev line = " + prevEntry.line + "]";
+      text += "==[prevNumOfStacks = " + prevNumOfStacks + "]";
 
-      if (curNumOfStacks == prevNumOfStacks) {
+      console.log(text);
 
+      if (curEntry.event == "call") {
+        assert(curNumOfStacks == prevNumOfStacks + 1);
+        var newStackName = curEntry.func_name;
+        text += "==new stack name: " + newStackName;
+        /*var curObject = curEntry.stack_to_render[curNumOfStacks - 1];
+        text += "It contains " + curObject.ordered_varnames.length + " variables";
+        $.each(curObject.ordered_varnames, function (i, varname) {
+          var curVarValue = curObject.encoded_locals[varname];
+          text += "==varable : " + curObject.ordered_varnames[i] + "'s value: " + curVarValue;
+        });*/
+      }
+      else if (curEntry.event == "return") {
+        //assert(curNumOfStacks  == prevNumOfStacks-1);
+        text += "==return";
+
+      } else {
+        //assert(curNumOfStacks == prevNumOfStacks);
         var curObject = curEntry.stack_to_render[curNumOfStacks - 1];
         var prevObject = prevEntry.stack_to_render[prevNumOfStacks - 1];
         text += "==[Curs Num Vars: " + curObject.ordered_varnames.length + "]";
         text += "==[Prev Num Vars: " + prevObject.ordered_varnames.length + "]";
-        if (curObject.ordered_varnames.length == prevObject.ordered_varnames.length) {
+        if (curEntry.stdout > prevEntry.stdout) {
+          text += "==new output: " + curEntry.stdout;
+        }
+        else if (curObject.ordered_varnames.length == prevObject.ordered_varnames.length) {
           $.each(curObject.ordered_varnames, function (i, varname) {
             var curVarValue = curObject.encoded_locals[varname];
             var prevVarValue = prevObject.encoded_locals[varname];
@@ -3633,12 +3656,13 @@ class CodeDisplay {
           text += "==value for new variable " + newVarName + " : " + newVarValue;
           correctAnswer = "new";
         }
-      } else if (curNumOfStacks > prevNumOfStacks) { //curNumOfStacks  == prevNumOfStacks + 1
-        var newStackName = curStack.funcName;
-        text += "==new stack name: " + newStackName;
+        else if (curNumOfStacks > prevNumOfStacks) { //curNumOfStacks  == prevNumOfStacks + 1
+          var newStackName = curStack.funcName;
+          text += "==new stack name: " + newStackName;
 
-      } else { //curNumOfStacks  == prevNumOfStacks-1
-        text += "==return";
+        } else { //curNumOfStacks  == prevNumOfStacks-1
+          text += "==return";
+        }
       }
 
       questionText.val(text);
