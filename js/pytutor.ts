@@ -3510,6 +3510,8 @@ class CodeDisplay {
         }
       });
 
+    // ============================================================================================
+
     // create a left-most gutter td that spans ALL rows ...
     // (NB: valign="top" is CRUCIAL for this to work in IE)
     // STEC4500: change color to yellow
@@ -3539,29 +3541,49 @@ class CodeDisplay {
     var outputFrames = this.owner.domRoot.find("#vizLayoutTdSecond");
     outputFrames.append('<td bgColor=yellow id="gutterTD2" valign="top" rowspan="' +
       this.owner.codeOutputLines.length + '"><div id="tutorQuizDiv">' +
-      '<textarea id="tutorQuestionText" readonly>Hello: </textarea></div></td>');
+      '<textarea rows="7" cols="50" id="tutorQuestionText" readonly>Hello:Jay </textarea></div></td>');
 
+    // Jiawei added another frames for pop up text.
+    var outputFrames = this.owner.domRoot.find("#vizLayoutTdSecond");
+    outputFrames.append(
+      '<td bgColor=yellow id="gutterTD2" valign="top" rowspan="'
+      + this.owner.codeOutputLines.length
+      + '"><div id="popUpText">\
+      <textarea rows="7" cols="35" id="popUpContent" readonly>Perfect! You got it right! </textarea></div></td>');
+
+    var score = 100; //score to track student's answers.
+    var popUp = outputFrames.find('#popUpText');
+    {
+      popUp.css('display', 'none');
+      popUp.css('position', 'absolute');
+      popUp.css('margin-left', '80px');
+    }
     var rightframe = outputFrames.find('#tutorQuizDiv');
-    rightframe.css('display', 'none');
-    rightframe.css('position', 'absolute');
-    rightframe.css('margin-left', '80px');
+    {
+      rightframe.css('display', 'none');
+      rightframe.css('position', 'absolute');
+      rightframe.css('margin-left', '80px');
+    }
 
-    var form = '<td><form action="#" method="post" id="cbVarChange">'
-      + '<p>Old one1</p>'
-      + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
-      + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
-      + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
-      + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
-      + '<p><button type="button" name="getVal">Get Value of Selected</button></p></form></td>';
+    var form = '<td><form id="cbVarChange">\
+      <p>Old one1</p>\
+      <input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>\
+      <input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>\
+      <input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>\
+      <input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br></form>\
+      <p><button id="buttonSubmit" type="button" name="getVal">Get Value of Selected</button></p></td>';
     rightframe.append(form);
 
     var o = this.owner;
     var cla = this.domRootD3.select('#curLineArrow');
     cla.on('click', function () {
+      correctAnswer = 'none';
       cla.attr('opacity', 1); // show it again!
+      popUp.css('display', 'none');
       rightframe.css('display', 'block');
 
       var questionText = rightframe.find('#tutorQuestionText');
+      // questionText.on('çlick', submitButton());
       var text = "";
 
       // get the NEXT object in the trace entry list.
@@ -3605,7 +3627,7 @@ class CodeDisplay {
             }
           });
         }
-        else { //curObject.ordered_varnames.length == prevObject.ordered_varnames.length+1)
+        else if (curObject.ordered_varnames.length == prevObject.ordered_varnames.length + 1) {
           var newVarName = curObject.ordered_varnames[curObject.ordered_varnames.length - 1];
           var newVarValue = curObject.encoded_locals[newVarName];
           text += "==value for new variable " + newVarName + " : " + newVarValue;
@@ -3625,12 +3647,9 @@ class CodeDisplay {
         + '<input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>'
         + '<input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>'
         + '<input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>'
-        + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br>'
-        + '<p><button type="button" name="getVal">Get Value of Selected</button></p>'
-        ;
+        + '<input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br></p>';
 
       var frameForm = document.getElementById('cbVarChange');
-      // var frameForm = rightframe.find('#cbVarChange');
       frameForm.innerHTML = newForm;
 
       o.updateOutput(true);
@@ -3652,17 +3671,36 @@ class CodeDisplay {
       return val; // return value of checked radio or undefined if none checked
     }
 
+    var popUpContents = popUp.find('#popUpContent');
+    var textOfPopUp = "";
+
     // STEC4500 4/9: attempt to create a radiobutton submission element.
-    document.getElementById('cbVarChange').onsubmit = function () {
+    rightframe.find('#buttonSubmit').on('click', function () {
+      // console.log('Button was pressed.');
       var studentAnswer = getRadioVal(document.getElementById('cbVarChange'), 'varChange');
       // only step forward if the answer is correct.
       if (correctAnswer == studentAnswer) {
+        textOfPopUp = "Perfect! You got it right!          Your current score is: " + score;
+        popUp.off("click");
         rightframe.css('display', 'none');
         o.stepForward();
+      } else {
+        score -= 5;
+        textOfPopUp = "incorrect try again. your score: " + score;
+        popUp.on('click', function () {
+          popUp.css('display', 'none');
+          rightframe.css('display', 'block');
+          o.updateOutput(true);
+        })
       }
       // no matter what happens, update the output.
+      rightframe.css('display', 'none');
+      popUpContents.val(textOfPopUp);
+      popUp.css('display', 'block'); //hide the textarea and the form and show the popUp text.
       o.updateOutput(true);
-    };
+    });
+
+    // ============================================================================================
 
     // 2012-09-05: Disable breakpoints for now to simplify UX
     // 2016-05-01: Revive breakpoint functionality
