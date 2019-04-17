@@ -3569,21 +3569,22 @@ class CodeDisplay {
     var form = '<td><form id="cbVarChange">\
       <p>Old one1</p>\
       <input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>\
-      <input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>\
       <input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>\
-      <input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br></form>\
-      <p><button id="buttonSubmit" type="button" name="getVal">Get Value of Selected</button></p></td>';
+	  <input type="checkbox" name="varChange" value="newFrame"><label for="New Frame">New Frame</label><br>\
+	  <input type="checkbox" name="varChange" value="return"><label for="Return">Return</label><br>\
+      <input type="checkbox" name="varChange" value="newOutput"><label for="New Output">New Output</label><br></form>\
+      <p><button id="buttonSubmit" type="button" name="getVal">Select All(or None) that Apply</button></p></td>';
     rightframe.append(form);
 
     var o = this.owner;
     var cla = this.domRootD3.select('#curLineArrow');
-    var correctAnswer;
+    var correctAnswer = [];
     cla.on('click', function () {
-      correctAnswer = 'none';
+	  correctAnswer = [];
       cla.attr('opacity', 1); // show it again!
       popUp.css('display', 'none');
       rightframe.css('display', 'block');
-
+	  
       var questionText = rightframe.find('#tutorQuestionText');
       var text = "";
 
@@ -3625,12 +3626,15 @@ class CodeDisplay {
           var curVarValue = curObject.encoded_locals[varname];
           text += "==varable : " + curObject.ordered_varnames[i] + "'s value: " + curVarValue;
         });*/
+		correctAnswer.push("newFrame");
       }
       else if (curEntry.event == "return") {
         //assert(curNumOfStacks  == prevNumOfStacks-1);
         text += "==return";
+		correctAnswer.push("return");
 
-      } else {
+      } 
+		else{
         //assert(curNumOfStacks == prevNumOfStacks);
         var curObject = curEntry.stack_to_render[curNumOfStacks - 1];
         var prevObject = prevEntry.stack_to_render[prevNumOfStacks - 1];
@@ -3638,14 +3642,15 @@ class CodeDisplay {
         text += "==[Prev Num Vars: " + prevObject.ordered_varnames.length + "]";
         if (curEntry.stdout > prevEntry.stdout) {
           text += "==new output: " + curEntry.stdout;
+		  correctAnswer.push("newOutput");
         }
-        else if (curObject.ordered_varnames.length == prevObject.ordered_varnames.length) {
+        if (curObject.ordered_varnames.length == prevObject.ordered_varnames.length) {
           $.each(curObject.ordered_varnames, function (i, varname) {
             var curVarValue = curObject.encoded_locals[varname];
             var prevVarValue = prevObject.encoded_locals[varname];
             if (curVarValue != prevVarValue) {
               text += "==varable : " + curObject.ordered_varnames[i] + "'s new value: " + curVarValue;
-              correctAnswer = "change";
+              correctAnswer.push("change");
               //text +=  "prev" + i + "th var: " + prevObject.ordered_varnames[i] + ": " + prevObject.encoded_locals[varname];
             }
           });
@@ -3654,24 +3659,19 @@ class CodeDisplay {
           var newVarName = curObject.ordered_varnames[curObject.ordered_varnames.length - 1];
           var newVarValue = curObject.encoded_locals[newVarName];
           text += "==value for new variable " + newVarName + " : " + newVarValue;
-          correctAnswer = "new";
+          correctAnswer.push("new");
         }
-        else if (curNumOfStacks > prevNumOfStacks) { //curNumOfStacks  == prevNumOfStacks + 1
-          var newStackName = curStack.funcName;
-          text += "==new stack name: " + newStackName;
-
-        } else { //curNumOfStacks  == prevNumOfStacks-1
-          text += "==return";
-        }
-      }
-
+		}
+      
+		correctAnswer.sort();
       questionText.val(text);
 
       var newForm = '<p>What is happening in this line?</p>\
-        <input type="radio" name="varChange" value="new"><label for="New Variable">New Variable</label><br>\
-        <input type="radio" name="varChange" value="gone"><label for="Deleted Variable">Deleted Variable</label><br>\
-        <input type="radio" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>\
-        <input type="radio" name="varChange" value="none"><label for="No Change">No Change</label><br></p>';
+        <input type="checkbox" name="varChange" value="new"><label for="New Variable">New Variable</label><br>\
+        <input type="checkbox" name="varChange" value="change"><label for="Changed Variable">Changed Variable</label><br>\
+		<input type="checkbox" name="varChange" value="newFrame"><label for="New Frame">New Frame</label><br>\
+		<input type="checkbox" name="varChange" value="return"><label for="Return">Return</label><br>\
+        <input type="checkbox" name="varChange" value="newOutput"><label for="New Output">New Output</label><br></p>';
 
       var frameForm = document.getElementById('cbVarChange');
       frameForm.innerHTML = newForm;
@@ -3682,28 +3682,42 @@ class CodeDisplay {
     // STEC4500: radiobutton form.
     // https://www.dyn-web.com/tutorials/forms/radio/get-selected.php
     function getRadioVal(form, name) {
-      var val;
+      var val =[];
       var radios = form.elements[name];
 
       // loop through list of radio buttons, get the checked one, and break out.
       for (var i = 0, len = radios.length; i < len; i++) {
         if (radios[i].checked) {
-          val = radios[i].value;
-          break;
+          val.push(radios[i].value);      
         }
       }
+	  val.sort();
       return val; // return value of checked radio or undefined if none checked
     }
 
     var popUpContents = popUp.find('#popUpContent');
     var textOfPopUp = "";
+	
+	function compareArray(correctAnswer, studentAnswer) {
+		console.log("correct answer: "+ correctAnswer);
+		console.log("student answer: "+ studentAnswer);
+		if(correctAnswer.length != studentAnswer.length)			
+			return false;
+		for (var i = 0; i <correctAnswer.length ; i++) {    
+			if (correctAnswer[i] != studentAnswer[i]) { 
+            // Warning - two different object instances will never be equal: {x:20} != {x:20}
+				return false;   
+			}           
+		}       
+		return true;
+	}
 
     // STEC4500 4/9: attempt to create a radiobutton submission element.
     rightframe.find('#buttonSubmit').on('click', function () {
       // console.log('Button was pressed.');
       var studentAnswer = getRadioVal(document.getElementById('cbVarChange'), 'varChange');
       // only step forward if the answer is correct.
-      if (correctAnswer == studentAnswer) {
+      if (compareArray(correctAnswer, studentAnswer)) {
         textOfPopUp = "Perfect! You got it right!          Your current score is: " + score;
         popUp.off("click");
         rightframe.css('display', 'none');
@@ -3717,6 +3731,7 @@ class CodeDisplay {
           o.updateOutput(true);
         })
       }
+	  
       // no matter what happens, update the output.
       rightframe.css('display', 'none');
       popUpContents.val(textOfPopUp);
