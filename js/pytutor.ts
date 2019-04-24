@@ -3362,12 +3362,15 @@ class CodeDisplay {
   arrowOffsetY: number;
   codeRowHeight: number;
 
+  score : any; //STEC4500
+
   constructor(owner, domRoot, domRootD3,
     codToDisplay: string, lang: string, editCodeBaseURL: string) {
     this.owner = owner;
     this.domRoot = domRoot;
     this.domRootD3 = domRootD3;
     this.codToDisplay = codToDisplay;
+    this.score = 100; //STEC4500 Display score in final textBOX.
 
     // 2018-03-15 - removed "Live programming" link from
     // visualization mode to simplify the UI, even if it drives
@@ -3552,7 +3555,7 @@ class CodeDisplay {
       + '"><div id="popUpText">\
       <textarea rows="7" cols="35" id="popUpContent" readonly>Perfect! You got it right! </textarea></div></td>');
 
-    var score = 100; //score to track student's answers.
+
     var popUp = outputFrames.find('#popUpText');
     {
       popUp.css('display', 'none');
@@ -3626,15 +3629,15 @@ class CodeDisplay {
           var curVarValue = curObject.encoded_locals[varname];
           text += "==varable : " + curObject.ordered_varnames[i] + "'s value: " + curVarValue;
         });*/
-		correctAnswer.push("newFrame");
+		    correctAnswer.push("newFrame");
       }
       else if (curEntry.event == "return") {
         //assert(curNumOfStacks  == prevNumOfStacks-1);
         text += "==return";
-		correctAnswer.push("return");
+		    correctAnswer.push("return");
 
       } 
-		else{
+  		else{
         //assert(curNumOfStacks == prevNumOfStacks);
         var curObject = curEntry.stack_to_render[curNumOfStacks - 1];
         var prevObject = prevEntry.stack_to_render[prevNumOfStacks - 1];
@@ -3642,7 +3645,7 @@ class CodeDisplay {
         text += "==[Prev Num Vars: " + prevObject.ordered_varnames.length + "]";
         if (curEntry.stdout > prevEntry.stdout) {
           text += "==new output: " + curEntry.stdout;
-		  correctAnswer.push("newOutput");
+		      correctAnswer.push("newOutput");
         }
         if (curObject.ordered_varnames.length == prevObject.ordered_varnames.length) {
           $.each(curObject.ordered_varnames, function (i, varname) {
@@ -3710,21 +3713,24 @@ class CodeDisplay {
 			}           
 		}       
 		return true;
-	}
+  }
+  
+  var scoreDisplay = this;
 
     // STEC4500 4/9: attempt to create a radiobutton submission element.
     rightframe.find('#buttonSubmit').on('click', function () {
+    
       // console.log('Button was pressed.');
       var studentAnswer = getRadioVal(document.getElementById('cbVarChange'), 'varChange');
       // only step forward if the answer is correct.
       if (compareArray(correctAnswer, studentAnswer)) {
-        textOfPopUp = "Perfect! You got it right!          Your current score is: " + score;
+        textOfPopUp = "Perfect! You got it right!          Your current score is: " + scoreDisplay.score;
         popUp.off("click");
         rightframe.css('display', 'none');
         o.stepForward();
       } else {
-        score -= 5;
-        textOfPopUp = "incorrect try again. your score: " + score;
+        scoreDisplay.score -= 5;
+        textOfPopUp = "incorrect try again. your score: " + scoreDisplay.score;
         popUp.on('click', function () {
           popUp.css('display', 'none');
           rightframe.css('display', 'block');
@@ -3737,6 +3743,7 @@ class CodeDisplay {
       popUpContents.val(textOfPopUp);
       popUp.css('display', 'block'); //hide the textarea and the form and show the popUp text.
       o.updateOutput(true);
+
     });
 
     // ============================================================================================
@@ -3774,7 +3781,7 @@ class CodeDisplay {
           d3.select(this.parentNode).select('td.cod').style('color', '');
         }
       });
-  }
+    }
 
   updateCodOutput(smoothTransition = false) {
     var gutterSVG = this.domRoot.find('svg#leftCodeGutterSVG');
@@ -4020,6 +4027,13 @@ class NavigationController {
     if (isLastInstr) {
       vcrControls.find("#jmpLastInstr").attr("disabled", true);
       vcrControls.find("#jmpStepFwd").attr("disabled", true);
+      //STEC4500 Detect the end.
+      var popUp = this.owner.domRoot.find("#vizLayoutTdSecond").find('#popUpText');
+      var popUpContents = popUp.find('#popUpContent');
+      var textOfPopUp = "";
+      textOfPopUp = "Great! You finished it!           Your final score is:" + this.owner.codDisplay.score;
+      popUpContents.val(textOfPopUp);
+      
     }
   }
 
